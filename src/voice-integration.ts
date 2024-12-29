@@ -1,4 +1,4 @@
-import {Guild, GuildMemberManager, VoiceBasedChannel, VoiceChannel, VoiceState} from "discord.js";
+import {Guild, VoiceBasedChannel, VoiceState} from "discord.js";
 import {config} from "./config";
 
 export function onVoiceState(old: VoiceState, current: VoiceState) {
@@ -29,7 +29,7 @@ async function processChannelLater(channel: VoiceBasedChannel | null, guild: Gui
 
     const availableMembers = members
         .filter(member => !member.user.bot)
-        .filter(member => member.presence?.status == "online" || member.presence?.status == "idle")
+        .filter(member => config.NOTIFICATION_STATUS.includes(member.presence?.status || "offline"))
         .filter(member => member.voice.channel?.id != channel.id);
 
     if(voiceChannelMembers.size == 0) {
