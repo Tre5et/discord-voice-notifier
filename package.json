@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "tsup src/index.ts && node dist/index.js",
+    "start": "npm run build && node dist/index.js",
     "build": "tsup src/index.ts --minify"
   },
   "author": "",
