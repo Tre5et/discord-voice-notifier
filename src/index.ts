@@ -15,4 +15,4 @@ client.on(Events.VoiceStateUpdate, (oldState, newState) => {
 });
 
 
-client.login(config.DISCORD_TOKEN);
+client.login(config.discordToken);

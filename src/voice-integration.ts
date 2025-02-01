@@ -1,63 +1,86 @@
-import {Guild, VoiceBasedChannel, VoiceState} from "discord.js";
-import {config} from "./config";
+import {Guild, GuildMember, VoiceBasedChannel, VoiceState} from "discord.js";
+import {config, getUserSettings} from "./config";
 
 export function onVoiceState(old: VoiceState, current: VoiceState) {
-    if(
-        current.channel
-        && current.channel.id != old.channel?.id
-        && config.VOICE_CHANNEL_IDS.includes(current.channel.id)
-        && current.channel.members.size == 1
-    ) {
-        console.log(`User ${current.member?.displayName} joined ${current.channel.name}: Scheduling notification in ${config.NOTIFICATION_TIMEOUT} seconds`);
-        setTimeout(
-            () => processChannelLater(current.channel, current.guild),
-            config.NOTIFICATION_TIMEOUT * 1000
-        );
+    if(current.channel?.id != old.channel?.id) {
+        if(config.voiceChannelIds.includes(old.channel?.id || "")) {
+            processLeave(old);
+        }
+        if(config.voiceChannelIds.includes(current.channel?.id || "")) {
+            processJoin(current);
+        }
     }
 }
 
-async function processChannelLater(channel: VoiceBasedChannel | null, guild: Guild) {
-    if(!channel) {
-        console.log("Invalid channel reference");
-        return;
-    }
-    console.log(`Processing voice channel ${channel.name}...`);
+function processJoin(join: VoiceState) {
+    const checked = checkPrerequisites(join);
+    if(!checked) return;
+    const [member, channel, guild] = checked;
+    console.log(`Processing voice channel join ${member.displayName} -> ${channel.name}...`);
+
     const members = guild.members.cache;
 
-    const voiceChannelMembers = members
-        .filter(member => member.voice.channel?.id == channel.id);
-
-    const availableMembers = members
+    const notifiedMembers = members
         .filter(member => !member.user.bot)
-        .filter(member => config.NOTIFICATION_STATUS.includes(member.presence?.status || "offline"))
-        .filter(member => member.voice.channel?.id != channel.id);
+        .map(member =>  {return {member: member, settings: getUserSettings(member.id)}})
+        .filter(member => member.settings.status.includes(member.member.presence?.status || "offline"))
+        .filter(member => member.settings.action.includes(channel.members.size > 1 ? "join" : "start"))
+        //.filter(member => member.member.voice.channel?.id != channel.id)
+        .map(member => member.member);
 
-    if(voiceChannelMembers.size == 0) {
-        console.log(`No one in ${channel.name}`);
-        return;
-    }
-
-    if(availableMembers.size == 0) {
-        console.log(`${voiceChannelMembers.map(m => m.displayName).join(", ")} in ${channel.name}: No one to ping`);
-        return;
-    }
-
-    const names = toEnglishList(voiceChannelMembers.map(m => m.displayName));
-
-    if(config.MODE == "NOTIFY") {
-        console.log(`${voiceChannelMembers.map(m => m.displayName).join(", ")} in ${channel.name}: Notifying ${availableMembers.map(m => m.displayName).join(", ")}`);
-        availableMembers.forEach(member => {
-            member.send(`**${names}** ${voiceChannelMembers.size > 1 ? "are" : "is"} in <#${channel.id}>! Consider joining them.`);
-        });
+    if(channel.members.size > 1) {
+        const existingMembers = channel.members.filter(m => m.id != member.id).map(m => m.displayName);
+        notify(notifiedMembers, channel, `**${member.displayName}** joined **${toEnglishList(existingMembers)}** in <#${channel.id}>! Consider joining too.`);
     } else {
-        console.log(`${voiceChannelMembers.map(m => m.displayName).join(", ")} in ${channel.name}: Pinging ${availableMembers.map(m => m.displayName).join(", ")}`);
+        notify(notifiedMembers, channel, `**${member.displayName}** joined <#${channel.id}>! Consider joining them.`);
+    }
+}
 
-        const pings = availableMembers
+function processLeave(leave: VoiceState) {
+    const checked = checkPrerequisites(leave);
+    if(!checked) return;
+    const [member, channel, guild] = checked;
+    console.log(`Processing voice channel leave ${member.displayName} -> ${channel.name}...`);
+
+    const members = guild.members.cache;
+
+    const notifiedMembers = members
+        .filter(member => !member.user.bot)
+        .map(member =>  {return {member: member, settings: getUserSettings(member.id)}})
+        .filter(member => member.settings.status.includes(member.member.presence?.status || "offline"))
+        .filter(member => member.settings.action.includes(channel.members.size > 0 ? "leave" : "empty"))
+        //.filter(member => member.member.voice.channel?.id != channel.id)
+        .map(member => member.member);
+
+    if(channel.members.size > 0) {
+        const remainingMembers = channel.members.map(m => m.displayName);
+        notify(notifiedMembers, channel, `**${member.displayName}** left **${toEnglishList(remainingMembers)}** in <#${channel.id}>! Consider joining the others.`);
+    } else {
+        notify(notifiedMembers, channel, `**${member.displayName}** left <#${channel.id}>!`);
+    }
+}
+
+function checkPrerequisites(action: VoiceState): [GuildMember, VoiceBasedChannel, Guild] | null {
+    const channel = action.channel;
+    const member = action.member;
+    if(!channel || !member) {
+        console.log("Invalid channel or member reference");
+        return null;
+    }
+    const guild = channel.guild
+
+    return [member, channel, guild];
+}
+
+function notify(members: GuildMember[], channel: VoiceBasedChannel, text: string) {
+    console.log(`Notifying ${members.map(m => m.displayName).join(", ")}: ${text}`);
+    if(config.mode == "notify") {
+        members.forEach(m => m.send(text));
+    } else {
+        const pings = members
             .map(member => `<@${member.id}>`)
             .join(" ");
-
-        console.log(`${voiceChannelMembers.map(m => m.displayName).join(", ")} alone in ${channel.name}: Pinging ${availableMembers.map(m => m.displayName).join(", ")}`);
-        await channel.send(`${pings} **${names}** ${voiceChannelMembers.size > 1 ? "are" : "is"} in voice channel **${channel.name}**! Consider joining them.`);
+        channel.send(`${pings} ${text}`)
     }
 }
 
