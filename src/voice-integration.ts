@@ -1,5 +1,5 @@
 import {Guild, GuildMember, VoiceBasedChannel, VoiceState} from "discord.js";
-import {config, getUserSettings} from "./config";
+import {config, getUserSettings, toEnglishList} from "./config";
 
 export function onVoiceState(old: VoiceState, current: VoiceState) {
     if(current.channel?.id != old.channel?.id) {
@@ -84,19 +84,3 @@ function notify(members: GuildMember[], channel: VoiceBasedChannel, text: string
     }
 }
 
-function toEnglishList(names: string[]): string {
-    if(names.length == 0) {
-        return "";
-    }
-
-    if(names.length == 1) {
-        return names[0];
-    }
-
-    if(names.length == 2) {
-        return `${names[0]} and ${names[1]}`;
-    }
-
-    const last = names.pop();
-    return `${names.join(", ")}, and ${last}`;
-}
