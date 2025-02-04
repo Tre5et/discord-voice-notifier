@@ -24,8 +24,9 @@ function processJoin(join: VoiceState) {
         .filter(member => !member.user.bot)
         .map(member =>  {return {member: member, settings: getUserSettings(member.id)}})
         .filter(member => member.settings.status.includes(member.member.presence?.status || "offline"))
-        .filter(member => member.settings.action.includes(channel.members.size > 1 ? "join" : "start"))
-        //.filter(member => member.member.voice.channel?.id != channel.id)
+        .filter(member => member.settings.events.includes(channel.members.size > 1 ? "join" : "start"))
+        .filter(m => m.member.id != member.id)
+        .filter(member => member.member.voice.channel?.id != channel.id)
         .map(member => member.member);
 
     if(channel.members.size > 1) {
@@ -48,8 +49,9 @@ function processLeave(leave: VoiceState) {
         .filter(member => !member.user.bot)
         .map(member =>  {return {member: member, settings: getUserSettings(member.id)}})
         .filter(member => member.settings.status.includes(member.member.presence?.status || "offline"))
-        .filter(member => member.settings.action.includes(channel.members.size > 0 ? "leave" : "empty"))
-        //.filter(member => member.member.voice.channel?.id != channel.id)
+        .filter(member => member.settings.events.includes(channel.members.size > 0 ? "leave" : "empty"))
+        .filter(m => m.member.id != member.id)
+        .filter(member => member.member.voice.channel?.id != channel.id)
         .map(member => member.member);
 
     if(channel.members.size > 0) {

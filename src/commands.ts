@@ -13,17 +13,6 @@ import {
     updateUserSettings
 } from "./config";
 
-export const ping: CommandData = {
-    data: new SlashCommandBuilder()
-        .setName("ping")
-        .setDescription("Replies with Pong!")
-        .setContexts(InteractionContextType.BotDM),
-
-    execute: async (interaction: ChatInputCommandInteraction) => {
-        await interaction.reply('Pong!')
-    }
-}
-
 export const status: CommandData = {
     data: new SlashCommandBuilder()
         .setName("status")

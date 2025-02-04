@@ -12,7 +12,7 @@ import {
 } from "discord.js";
 import {config} from "./config";
 import {onVoiceState} from "./voice-integration";
-import {event, ping, status} from "./commands";
+import {event, status} from "./commands";
 
 export type CommandData = {
     data: SlashCommandBuilder | SlashCommandOptionsOnlyBuilder | SlashCommandSubcommandsOnlyBuilder
@@ -33,7 +33,6 @@ function registerCommand(command: CommandData) {
 client.on(Events.ClientReady, () => {
     console.log("Registering commands...");
 
-    registerCommand(ping);
     registerCommand(status);
     registerCommand(event);
 
